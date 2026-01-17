@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "redlock-py"
+version = "2.0.0"
+description = "Production-grade Redlock implementation for Python (Sync + Async)"
+authors = ["Vivek Dagar <vivdagar@gmail.com>"]
+readme = "README.md"
+packages = [{include = "redlock", from = "src"}]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+redis = "^5.0.0"
+pydantic = "^2.5.0"
+urllib3 = "<2.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-mock = "^3.12.0"
+hypothesis = "^6.90.0"
+requests = "^2.31.0" # For Toxiproxy API
+ruff = "^0.1.0"
+mypy = "^1.8.0"
+bandit = "^1.7.0"
+types-redis = "^4.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+select = ["E", "F", "I", "B", "UP", "PL", "RUF"]
+ignore = []
+
+[tool.mypy]
+strict = true
+python_version = "3.9"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -1,89 +1,135 @@
-![RedLock logo](https://github.com/glasslion/redlock/raw/master/docs/assets/redlock-small.png)
+# Redlock-py
 
-## RedLock - Distributed locks with Redis and Python
+[![PyPI version](https://badge.fury.io/py/redlock-py.svg)](https://badge.fury.io/py/redlock-py)
+[![CI](https://github.com/alwaysvivek/redlock-py/actions/workflows/ci.yml/badge.svg)](https://github.com/alwaysvivek/redlock-py/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![Build Status](https://travis-ci.org/glasslion/redlock.svg?branch=master)](https://travis-ci.org/glasslion/redlock)
+A **production-grade**, type-safe, and modern implementation of the [Redis Redlock](https://redis.io/docs/manual/patterns/distributed-locks/) algorithm in Python. Supports both **Synchronous** and **Asynchronous** (asyncio) execution.
 
-This library implements the RedLock algorithm introduced by [@antirez](http://antirez.com/)
+---
 
+## 🏗 Architecture
 
-### Yet another ...
-There are already a few redis based lock implementations in the Python world, e.g.  [retools](https://github.com/bbangert/retools),  [redis-lock](https://pypi.python.org/pypi/redis-lock/0.2.0).
+The `Redlock` client manages connections to `N` independent Redis instances. To acquire a lock, it attempts to set a unique token on all instances sequentially. The lock is considered acquired only if:
+1.  Quorum (N/2 + 1) instances allow the lock.
+2.  Total time taken is less than the lock validity time.
 
-However, these libraries can only work with *single-master* redis server. When the Redis master goes down, your application has to face a single point of failure. We can't rely on the master-slave replication, because Redis replication is asynchronous.
+```mermaid
+sequenceDiagram
+    participant Client
+    participant R1 as Redis 1
+    participant R2 as Redis 2
+    participant R3 as Redis 3 (Quorum)
+    participant R4 as Redis 4 
+    participant R5 as Redis 5
 
-> This is an obvious race condition with the master-slave replication model :
->  1. Client A acquires the lock into the master.
->  2. The master crashes before the write to the key is transmitted to the slave.
->  3. The slave gets promoted to master.
->  4. Client B acquires the lock to the same resource A already holds a lock for. SAFETY VIOLATION!
-
-### A quick introduction to the RedLock algorithm
-To resolve this problem, the Redlock algorithm assume we have `N` Redis masters. These nodes are totally independent (no replications). In order to acquire the lock, the client will try to acquire the lock in all the N instances sequentially. If and only if the client was able to acquire the lock in the majority (`(N+1)/2`)of the instances, the lock is considered to be acquired.
-
-The detailed description of the RedLock algorithm can be found in the Redis documentation: [Distributed locks with Redis](http://redis.io/topics/distlock).
-
-### APIs
-
-The `redlock.RedLock` class shares a similar API with the `threading.Lock` class in the  Python Standard Library.
-
-#### Basic Usage
-
-```python
-from redlock import RedLock
-# By default, if no redis connection details are
-# provided, RedLock uses redis://127.0.0.1:6379/0
-lock =  RedLock("distributed_lock")
-lock.acquire()
-do_something()
-lock.release()
+    Client->>R1: SET resource unique_token NX PX 10000
+    R1-->>Client: OK
+    Client->>R2: SET resource unique_token NX PX 10000
+    R2-->>Client: OK
+    Client->>R3: SET resource unique_token NX PX 10000
+    R3-->>Client: OK
+    
+    Note over Client: Quorum reached (3/5)
+    
+    Client-->>Client: Calculate Drift & Validity
+    
+    alt Success
+        Client->>Client: Return Valid Lock
+    else Failure (timeout or no quorum)
+        Client->>R1: DEL resource (Unlock)
+        Client->>R2: DEL resource (Unlock)
+        Client->>R3: DEL resource (Unlock)
+    end
 ```
 
-#### With Statement / Context Manager
+## 🚀 Features
 
-As with `threading.Lock`, `redlock.RedLock` objects are context managers thus support the [With Statement](https://docs.python.org/2/reference/datamodel.html#context-managers). This way is more pythonic and recommended.
+*   **Dual Interface**: Complete support for `Redlock` (blocking/sync) and `AsyncRedlock` (async/await).
+*   **Type Safe**: 100% typed with `mypy --strict`.
+*   **Fault Tolerant**: Resilient to single node failures.
+*   **Production Ready**: Includes Jitter, Drift calculation, and proper error handling.
 
-```python
-from redlock import RedLock
-with RedLock("distributed_lock"):
-    do_something()
+## 📦 Installation
+
+```bash
+pip install redlock-py
+# or with poetry
+poetry add redlock-py
 ```
 
-#### Specify multiple Redis nodes
+## 💻 Usage
+
+### Synchronous
 
 ```python
-from redlock import RedLock
-with RedLock("distributed_lock",
-              connection_details=[
-                {'host': 'xxx.xxx.xxx.xxx', 'port': 6379, 'db': 0},
-                {'host': 'xxx.xxx.xxx.xxx', 'port': 6379, 'db': 0},
-                {'host': 'xxx.xxx.xxx.xxx', 'port': 6379, 'db': 0},
-                {'host': 'xxx.xxx.xxx.xxx', 'port': 6379, 'db': 0},
-              ]
-            ):
-    do_something()
+from redlock import Redlock, RedlockConfig
+
+# Configure with list of Redis URIs
+config = RedlockConfig(
+    masters=[
+        "redis://localhost:6379/0",
+        "redis://localhost:6380/0",
+        "redis://localhost:6381/0",
+    ]
+)
+
+lock_manager = Redlock(config)
+
+# 1. Standard usage (Non-blocking)
+try:
+    with lock_manager.lock("my-resource", ttl=10000) as lock:
+        if lock.valid:
+            print(f"Lock acquired: {lock.resource}")
+            # Do critical work...
+        else:
+            print("Failed to acquire lock")
+except Exception:
+    pass
+
+# 2. Blocking usage (Wait indefinitely until acquired)
+with lock_manager.lock("my-resource", ttl=10000, blocking=True) as lock:
+    print("Locked! This might have waited.")
+
+# 3. Explicit Token Unlock (e.g. from a different process)
+lock_manager.unlock("my-resource", "previous-token-uuid")
 ```
 
-The `connection_details` parameter expects a list of keyword arguments for initializing Redis clients.
-Other acceptable Redis client arguments  can be found on the [redis-py doc](http://redis-py.readthedocs.org/en/latest/#redis.StrictRedis).
-
-#### Reuse Redis clients with the RedLockFactory
-
-Usually the connection details of the Redis nodes are fixed. `RedLockFactory` can help reuse them, create multiple RedLocks but only initialize the clients once.
+### Asynchronous
 
 ```python
-from redlock import RedLockFactory
-factory = RedLockFactory(
-    connection_details=[
-        {'host': 'xxx.xxx.xxx.xxx'},
-        {'host': 'xxx.xxx.xxx.xxx'},
-        {'host': 'xxx.xxx.xxx.xxx'},
-        {'host': 'xxx.xxx.xxx.xxx'},
-    ])
+import asyncio
+from redlock import AsyncRedlock, RedlockConfig
 
-with factory.create_lock("distributed_lock"):
-    do_something()
+async def main():
+    config = RedlockConfig(
+        masters=[
+            "redis://localhost:6379/0",
+            "redis://localhost:6380/0",
+            "redis://localhost:6381/0",
+        ]
+    )
+    
+    lock_manager = AsyncRedlock(config)
 
-with factory.create_lock("another_lock"):
-    do_something()
+    async with lock_manager.lock("my-async-resource", ttl=10000) as lock:
+        if lock.valid:
+            print("Async lock acquired!")
+            await asyncio.sleep(1)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## 🧪 Testing
+
+This project uses a rigorous testing strategy including:
+1.  **Unit Tests**: Mocked Redis interactions.
+2.  **Integration Tests**: Docker-based tests against 5 real Redis nodes.
+3.  **Fault Injection**: Network partition simulations using Toxiproxy.
+
+To run tests:
+```bash
+docker-compose up -d
+pytest
 ```

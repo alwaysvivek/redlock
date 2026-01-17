@@ -1,0 +1,48 @@
+services:
+  # 5 Redis Instances for Redlock Quorum
+  redis-1:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+  
+  redis-2:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --save "" --appendonly no
+
+  redis-3:
+    image: redis:7-alpine
+    ports:
+      - "6381:6379"
+    command: redis-server --save "" --appendonly no
+
+  redis-4:
+    image: redis:7-alpine
+    ports:
+      - "6382:6379"
+    command: redis-server --save "" --appendonly no
+
+  redis-5:
+    image: redis:7-alpine
+    ports:
+      - "6383:6379"
+    command: redis-server --save "" --appendonly no
+
+  # Network Simulation for Split-Brain Tests
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.7.0
+    ports:
+      - "8474:8474" # API
+      - "26379:26379" # Proxied Redis 1
+      - "26380:26380" # Proxied Redis 2
+      - "26381:26381" # Proxied Redis 3
+      - "26382:26382" # Proxied Redis 4
+      - "26383:26383" # Proxied Redis 5
+    depends_on:
+      - redis-1
+      - redis-2
+      - redis-3
+      - redis-4
+      - redis-5

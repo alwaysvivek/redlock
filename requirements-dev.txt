@@ -1,5 +1,0 @@
--r requirements.txt
-bpython
-flake8
-pytest
-mock
