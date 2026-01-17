@@ -4,6 +4,8 @@ version = "2.0.4"
 description = "Production-grade Redlock implementation for Python (Sync + Async)"
 authors = ["Vivek Dagar <vivdagar@gmail.com>"]
 readme = "README.md"
+repository = "https://github.com/alwaysvivek/redlock"
+homepage = "https://github.com/alwaysvivek/redlock"
 packages = [{include = "redlock", from = "src"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

@@ -1,7 +1,7 @@
-# Redlock-py
+# Redlock-ng
 
-[![PyPI version](https://badge.fury.io/py/redlock-py.svg)](https://badge.fury.io/py/redlock-py)
-[![CI](https://github.com/alwaysvivek/redlock-py/actions/workflows/ci.yml/badge.svg)](https://github.com/alwaysvivek/redlock-py/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/redlock-ng.svg)](https://badge.fury.io/py/redlock-ng)
+[![CI](https://github.com/alwaysvivek/redlock/actions/workflows/workflow.yml/badge.svg)](https://github.com/alwaysvivek/redlock/actions/workflows/workflow.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A **production-grade**, type-safe, and modern implementation of the [Redis Redlock](https://redis.io/docs/manual/patterns/distributed-locks/) algorithm in Python. Supports both **Synchronous** and **Asynchronous** (asyncio) execution.
@@ -53,9 +53,9 @@ sequenceDiagram
 ## 📦 Installation
 
 ```bash
-pip install redlock-py
+pip install redlock-ng
 # or with poetry
-poetry add redlock-py
+poetry add redlock-ng
 ```
 
 ## 💻 Usage
@@ -94,6 +94,26 @@ with lock_manager.lock("my-resource", ttl=10000, blocking=True) as lock:
 # 3. Explicit Token Unlock (e.g. from a different process)
 lock_manager.unlock("my-resource", "previous-token-uuid")
 ```
+
+## 📚 API Reference
+
+### `RedlockConfig`
+Configuration object for the client.
+- `masters`: List of Redis connection strings (e.g., `redis://localhost:6379/0`).
+- `socket_timeout`: Timeout for Redis operations (default: 0.1s).
+- `socket_connect_timeout`: Timeout for connecting (default: 0.1s).
+
+### `Redlock` / `AsyncRedlock`
+The main lock manager.
+- `__init__(config)`: Initialize with a config object.
+- `lock(resource, ttl, blocking=False)`: Context manager to acquire lock.
+- `unlock(resource, token)`: Explicitly release a lock by token.
+
+### `Lock`
+The lock object returned by the context manager.
+- `resource`: The resource name.
+- `valid`: Boolean indicating if lock is held.
+- `validity`: Time remaining in milliseconds.
 
 ### Asynchronous
 
