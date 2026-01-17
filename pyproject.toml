@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "redlock-py"
-version = "2.0.0"
+version = "2.0.1"
 description = "Production-grade Redlock implementation for Python (Sync + Async)"
 authors = ["Vivek Dagar <vivdagar@gmail.com>"]
 readme = "README.md"
