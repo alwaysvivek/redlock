@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, call
 from redlock.lock import Redlock
 from redlock.scripts import RELEASE_SCRIPT
+
 
 @pytest.fixture
 def mock_client(mocker):

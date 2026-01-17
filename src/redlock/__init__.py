@@ -1,5 +1,5 @@
 from .client import RedlockConfig
-from .lock import Redlock, AsyncRedlock, Lock
+from .lock import AsyncRedlock, Lock, Redlock
 
 __all__ = [
     "Redlock",

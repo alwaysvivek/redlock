@@ -1,5 +1,5 @@
+
 import pytest
-import asyncio
 from redlock import AsyncRedlock
 
 MASTERS = [

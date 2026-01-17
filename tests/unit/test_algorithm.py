@@ -1,4 +1,5 @@
-from redlock.algorithm import calculate_drift, get_quorum, calculate_validity
+from redlock.algorithm import calculate_drift, calculate_validity, get_quorum
+
 
 def test_quorum_calculation():
     assert get_quorum(1) == 1  # 0 + 1

@@ -1,6 +1,7 @@
-import pytest
 import time
-from redlock import Redlock, RedlockConfig
+
+import pytest
+from redlock import Redlock
 
 # Assuming docker-compose is running
 MASTERS = [

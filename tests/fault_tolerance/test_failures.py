@@ -1,7 +1,6 @@
+
 import pytest
-import time
 import requests
-import json
 from redlock import Redlock
 
 # Toxiproxy API
@@ -42,7 +41,7 @@ def setup_toxiproxy():
         try:
             # Delete if exists
             requests.delete(f"{TOXIPROXY_API}/proxies/{name}")
-        except:
+        except Exception:
             pass
             
         # Create

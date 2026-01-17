@@ -1,17 +1,18 @@
 import asyncio
 import random
 import time
-from typing import Optional, List, Union
 from types import TracebackType
+from typing import Optional, Union
 
-from .client import SyncRedlockClient, AsyncRedlockClient, RedlockConfig
 from .algorithm import (
-    get_random_token, 
-    calculate_drift, 
-    calculate_validity, 
-    current_time_ms
+    calculate_drift,
+    calculate_validity,
+    current_time_ms,
+    get_random_token,
 )
-from .scripts import RELEASE_SCRIPT, EXTEND_SCRIPT
+from .client import AsyncRedlockClient, RedlockConfig, SyncRedlockClient
+from .scripts import EXTEND_SCRIPT, RELEASE_SCRIPT
+
 
 class Lock:
     """Represents a distributed lock."""
@@ -25,7 +26,13 @@ class Lock:
 class Redlock:
     """Synchronous Redlock Implementation."""
     
-    def __init__(self, config: Union[RedlockConfig, List[str]], retry_count: int = 3, retry_delay_min: float = 0.1, retry_delay_max: float = 0.3):
+    def __init__(
+        self,
+        config: Union[RedlockConfig, list[str]],
+        retry_count: int = 3,
+        retry_delay_min: float = 0.1,
+        retry_delay_max: float = 0.3,
+    ):
         self.client = SyncRedlockClient(config)
         self.retry_count = retry_count
         self.retry_delay_min = retry_delay_min
@@ -73,7 +80,7 @@ class Redlock:
                 time.sleep(delay)
 
 
-    def release(self, lock: Union[Lock, tuple]) -> None:
+    def release(self, lock: Union[Lock, tuple[str, str]]) -> None:
         """Release a lock. Accepts a Lock object or a (resource, token) tuple."""
         if isinstance(lock, Lock):
             self._unlock_all(lock.resource, lock.value)
@@ -95,7 +102,7 @@ class Redlock:
         for instance in self.client.instances:
             try:
                 # eval(script, numkeys, *keys_and_args)
-                if instance.eval(EXTEND_SCRIPT, 1, lock.resource, lock.value, additional_ttl):
+                if instance.eval(EXTEND_SCRIPT, 1, lock.resource, lock.value, additional_ttl): # type: ignore
                    n_extended += 1
             except Exception:
                 continue
@@ -104,10 +111,10 @@ class Redlock:
         # But for extension, usually simple quorum set is sufficient as long as we held it.
         return n_extended >= self.client.quorum
 
-    def _unlock_all(self, resource: str, token: str):
+    def _unlock_all(self, resource: str, token: str) -> None:
         for instance in self.client.instances:
             try:
-                instance.eval(RELEASE_SCRIPT, 1, resource, token)
+                instance.eval(RELEASE_SCRIPT, 1, resource, token) # type: ignore
             except Exception:
                 pass
 
@@ -131,7 +138,12 @@ class LockContext:
         invalid_lock.valid = False
         return invalid_lock
 
-    def __exit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]):
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         if self.lock_obj and self.lock_obj.valid:
             self.redlock.release(self.lock_obj)
 
@@ -139,7 +151,13 @@ class LockContext:
 class AsyncRedlock:
     """Asynchronous Redlock Implementation."""
     
-    def __init__(self, config: Union[RedlockConfig, List[str]], retry_count: int = 3, retry_delay_min: float = 0.1, retry_delay_max: float = 0.3):
+    def __init__(
+        self,
+        config: Union[RedlockConfig, list[str]],
+        retry_count: int = 3,
+        retry_delay_min: float = 0.1,
+        retry_delay_max: float = 0.3,
+    ):
         self.client = AsyncRedlockClient(config)
         self.retry_count = retry_count
         self.retry_delay_min = retry_delay_min
@@ -175,7 +193,7 @@ class AsyncRedlock:
             if n_acquired >= self.client.quorum and validity > 0:
                 # We need to adapt Lock to be async-aware or wrapper? 
                 # Actually Lock object is just data, we pass 'self' (AsyncRedlock) to it.
-                return Lock(resource, token, validity, self) # type: ignore
+                return Lock(resource, token, validity, self)
             else:
                 await self._unlock_all(resource, token)
                 
@@ -188,7 +206,7 @@ class AsyncRedlock:
         return None
 
 
-    async def release(self, lock: Union[Lock, tuple]) -> None:
+    async def release(self, lock: Union[Lock, tuple[str, str]]) -> None:
         if isinstance(lock, Lock):
             await self._unlock_all(lock.resource, lock.value)
             lock.valid = False
@@ -198,10 +216,10 @@ class AsyncRedlock:
     async def unlock(self, resource: str, token: str) -> None:
          await self._unlock_all(resource, token)
 
-    async def _unlock_all(self, resource: str, token: str):
+    async def _unlock_all(self, resource: str, token: str) -> None:
         futures = []
         for instance in self.client.instances:
-            futures.append(instance.eval(RELEASE_SCRIPT, 1, resource, token))
+            futures.append(instance.eval(RELEASE_SCRIPT, 1, resource, token)) # type: ignore
         
         await asyncio.gather(*futures, return_exceptions=True)
 
@@ -218,10 +236,15 @@ class AsyncLockContext:
         self.lock_obj = await self.redlock.acquire(self.resource, self.ttl, blocking=self.blocking)
         if self.lock_obj:
             return self.lock_obj
-        invalid_lock = Lock(self.resource, "", 0, self.redlock) # type: ignore
+        invalid_lock = Lock(self.resource, "", 0, self.redlock)
         invalid_lock.valid = False
         return invalid_lock
 
-    async def __aexit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]):
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         if self.lock_obj and self.lock_obj.valid:
             await self.redlock.release(self.lock_obj)

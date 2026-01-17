@@ -38,16 +38,20 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py39"
 select = ["E", "F", "I", "B", "UP", "PL", "RUF"]
-ignore = []
+ignore = ["PLR2004"]
 
 [tool.mypy]
 strict = true
 python_version = "3.9"
 ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+exclude = ["tests"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+

@@ -1,5 +1,7 @@
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from redlock.algorithm import calculate_drift, calculate_validity
+
 
 @given(
     ttl=st.integers(min_value=100, max_value=60000),
