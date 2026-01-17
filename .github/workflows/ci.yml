@@ -17,32 +17,7 @@ jobs:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
         redis-version: ["7.2"]
 
-    services:
-      redis-1:
-        image: redis:7.2-alpine
-        ports:
-          - 6379:6379
-      redis-2:
-        image: redis:7.2-alpine
-        ports:
-          - 6380:6379
-      redis-3:
-        image: redis:7.2-alpine
-        ports:
-          - 6381:6379
-      redis-4:
-        image: redis:7.2-alpine
-        ports:
-          - 6382:6379
-      redis-5:
-        image: redis:7.2-alpine
-        ports:
-          - 6383:6379
-      # Toxiproxy service is nice to have but complex to setup in Service containers 
-      # dynamic port mapping. We will use a dedicated step to setup docker compose 
-      # if we want to run the full fault tolerance suite.
-      # For standard CI matrix, we can run Unit + Integration (Happy path) 
-      # or we can just spin up the docker compose stack.
+
 
     steps:
     - uses: actions/checkout@v4
