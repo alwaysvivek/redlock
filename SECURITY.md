@@ -15,7 +15,7 @@ Distributed locking is a critical component of many systems. If you discover a s
 
 **Do not open a public issue.**
 
-Instead, please email **vivdagar@gmail.com** with a description of the vulnerability. I will attempt to respond within 48 hours.
+Instead, please email **vivekdagar212@gmail.com** with a description of the vulnerability. I will attempt to respond within 48 hours.
 
 ### Critical Considerations
 Please note that the [Redlock algorithm itself](https://redis.io/docs/manual/patterns/distributed-locks/) has known limitations regarding clock drift and timing guarantees. Issues inherent to the algorithm design should be discussed on the Redis mailing list or documentation, whereas implementation bugs in this library are valid security reports.
